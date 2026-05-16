@@ -37,10 +37,23 @@ dart-audit season \
   --table outputs/tables/game-competitors.md
 ```
 
+특정 분기 기준으로 비교하려면 `--period`를 사용한다.
+
+```bash
+dart-audit season \
+  --companies "크래프톤,넷마블,엔씨소프트,카카오게임즈" \
+  --period 25.4Q \
+  --table outputs/tables/game-competitors-25-4q.md
+```
+
+기본값은 `--basis quarter`이며, 분기 실적을 보여준다. DART 보고서 누계 숫자를 그대로 보고 싶으면 `--basis cumulative`을 사용한다.
+
 결과:
 
 - 최신 분기/반기/사업보고서 확인
 - 매출, 영업이익, 영업이익률, 순이익, 자산 추출
+- 특정 분기 지정 시 회사별 기준 기간 통일
+- QoQ, YoY 증감률과 추세 코멘트 생성
 - 특수 상황 공시 탐지
 - Markdown 또는 CSV 테이블 생성/추가
 

@@ -217,22 +217,40 @@ def fetch_recent_disclosures(corp_code: str, api_key: str, years_back: int = 1, 
 
 
 def report_code_from_name(report_name: str) -> Optional[str]:
+    parsed = report_year_month_from_name(report_name)
+    if parsed:
+        _, month = parsed
+        if month == 3:
+            return "11013"
+        if month == 6:
+            return "11012"
+        if month == 9:
+            return "11014"
+        if month == 12:
+            return "11011"
     if "사업보고서" in report_name:
         return "11011"
     if "반기보고서" in report_name:
         return "11012"
-    if "분기보고서" in report_name and "3" in report_name:
+    if "3분기보고서" in report_name:
         return "11014"
     if "분기보고서" in report_name:
         return "11013"
     return None
 
 
+def report_year_month_from_name(report_name: str) -> Optional[tuple[int, int]]:
+    period_match = re.search(r"\((\d{4})\.(\d{2})\)", report_name)
+    if not period_match:
+        return None
+    return int(period_match.group(1)), int(period_match.group(2))
+
+
 def business_year_from_filing(filing: dict[str, str]) -> int:
     report_name = filing.get("report_nm", "")
-    period_match = re.search(r"\((\d{4})\.(?:\d{2})\)", report_name)
-    if period_match:
-        return int(period_match.group(1))
+    parsed = report_year_month_from_name(report_name)
+    if parsed:
+        return parsed[0]
     rcept_year = int((filing.get("rcept_dt") or str(datetime.now().year))[:4])
     if "사업보고서" in report_name:
         return rcept_year - 1
@@ -293,22 +311,34 @@ def fetch_financials_annual_first(corp_code: str, api_key: str, fs_div: str) -> 
     return {"year": None, "report_code": None, "report_name": "미확인", "rows": [], "fs_div": fs_div}
 
 
-def account_value(rows: list[dict[str, object]], names: list[str]) -> Optional[int]:
+def account_value(rows: list[dict[str, object]], names: list[str], amount_field: str = "thstrm_amount") -> Optional[int]:
     for row in rows:
         account = str(row.get("account_nm", ""))
         if any(name in account for name in names):
-            value = parse_amount(row.get("thstrm_amount"))
+            value = parse_amount(row.get(amount_field))
+            if value is None and amount_field != "thstrm_amount":
+                value = parse_amount(row.get("thstrm_amount"))
             if value is not None:
                 return value
     return None
 
 
-def financial_summary(financials: dict[str, object]) -> dict[str, str]:
+def extract_metric_values(financials: dict[str, object], amount_field: str = "thstrm_amount") -> dict[str, Optional[int]]:
     rows = list(financials.get("rows") or [])
-    revenue = account_value(rows, ["매출액", "영업수익", "수익(매출액)"])
-    op = account_value(rows, ["영업이익"])
-    net = account_value(rows, ["당기순이익", "분기순이익", "반기순이익"])
-    assets = account_value(rows, ["자산총계"])
+    return {
+        "revenue": account_value(rows, ["매출액", "영업수익", "수익(매출액)"], amount_field),
+        "operating_profit": account_value(rows, ["영업이익"], amount_field),
+        "net_income": account_value(rows, ["당기순이익", "분기순이익", "반기순이익"], amount_field),
+        "assets": account_value(rows, ["자산총계"]),
+    }
+
+
+def financial_summary(financials: dict[str, object]) -> dict[str, str]:
+    metrics = extract_metric_values(financials)
+    revenue = metrics["revenue"]
+    op = metrics["operating_profit"]
+    net = metrics["net_income"]
+    assets = metrics["assets"]
     margin = "미확인"
     if revenue and op is not None:
         margin = f"{op / revenue * 100:.1f}%"
@@ -320,6 +350,178 @@ def financial_summary(financials: dict[str, object]) -> dict[str, str]:
         "net_income": format_krw(net),
         "assets": format_krw(assets),
         "op_margin": margin,
+    }
+
+
+REPORT_CODE_BY_QUARTER = {
+    1: "11013",
+    2: "11012",
+    3: "11014",
+    4: "11011",
+}
+
+
+def quarter_from_report(financials: dict[str, object]) -> Optional[int]:
+    report_name = str(financials.get("report_name") or "")
+    parsed = report_year_month_from_name(report_name)
+    if parsed:
+        month = parsed[1]
+        return {3: 1, 6: 2, 9: 3, 12: 4}.get(month)
+    code = str(financials.get("report_code") or "")
+    return {"11013": 1, "11012": 2, "11014": 3, "11011": 4}.get(code)
+
+
+def period_label(year: Optional[int], quarter: Optional[int]) -> str:
+    if not year or not quarter:
+        return "미확인"
+    return f"{str(year)[-2:]}.{quarter}Q"
+
+
+def parse_period_option(value: Optional[str]) -> Optional[tuple[int, int]]:
+    if not value:
+        return None
+    normalized = value.strip().upper().replace(" ", "")
+    match = re.fullmatch(r"(\d{2}|\d{4})[.\-]?Q?([1-4])Q?", normalized)
+    if not match:
+        raise typer.BadParameter("--period 형식은 26.1Q, 2026Q1, 2026.1Q 중 하나로 입력하세요.")
+    year = int(match.group(1))
+    if year < 100:
+        year += 2000
+    quarter = int(match.group(2))
+    return year, quarter
+
+
+def previous_quarter(year: int, quarter: int) -> tuple[int, int]:
+    if quarter == 1:
+        return year - 1, 4
+    return year, quarter - 1
+
+
+def subtract_metric_values(current: dict[str, Optional[int]], prior: dict[str, Optional[int]]) -> dict[str, Optional[int]]:
+    result: dict[str, Optional[int]] = {}
+    for key in ["revenue", "operating_profit", "net_income"]:
+        cur = current.get(key)
+        prev = prior.get(key)
+        result[key] = cur - prev if cur is not None and prev is not None else None
+    result["assets"] = current.get("assets")
+    return result
+
+
+def fetch_cumulative_metrics(corp_code: str, api_key: str, fs_div: str, year: int, quarter: int) -> Optional[dict[str, Optional[int]]]:
+    code = REPORT_CODE_BY_QUARTER[quarter]
+    report_name = {1: "1분기보고서", 2: "반기보고서", 3: "3분기보고서", 4: "사업보고서"}[quarter]
+    financials = fetch_financials_for_period(corp_code, api_key, fs_div, year, code, report_name)
+    if not financials.get("rows"):
+        return None
+    amount_field = "thstrm_add_amount" if quarter in {2, 3} else "thstrm_amount"
+    return extract_metric_values(financials, amount_field=amount_field)
+
+
+def fetch_quarter_metrics(corp_code: str, api_key: str, fs_div: str, year: int, quarter: int) -> Optional[dict[str, Optional[int]]]:
+    code = REPORT_CODE_BY_QUARTER[quarter]
+    report_name = {1: "1분기보고서", 2: "반기보고서", 3: "3분기보고서", 4: "사업보고서"}[quarter]
+    financials = fetch_financials_for_period(corp_code, api_key, fs_div, year, code, report_name)
+    if not financials.get("rows"):
+        return None
+    if quarter in {1, 2, 3}:
+        return extract_metric_values(financials)
+    annual = extract_metric_values(financials)
+    q3_cumulative = fetch_cumulative_metrics(corp_code, api_key, fs_div, year, 3)
+    if not q3_cumulative:
+        return annual
+    return subtract_metric_values(annual, q3_cumulative)
+
+
+def find_filing_for_period(filings: list[dict[str, str]], year: int, quarter: int) -> Optional[dict[str, str]]:
+    target_month = {1: 3, 2: 6, 3: 9, 4: 12}[quarter]
+    for filing in filings:
+        parsed = report_year_month_from_name(filing.get("report_nm", ""))
+        if parsed == (year, target_month):
+            return filing
+    return None
+
+
+def fetch_financials_for_quarter(corp_code: str, api_key: str, fs_div: str, year: int, quarter: int) -> dict[str, object]:
+    code = REPORT_CODE_BY_QUARTER[quarter]
+    report_name = {1: "1분기보고서", 2: "반기보고서", 3: "3분기보고서", 4: "사업보고서"}[quarter]
+    financials = fetch_financials_for_period(corp_code, api_key, fs_div, year, code, report_name)
+    financials["year"] = year
+    financials["report_code"] = code
+    financials["report_name"] = f"{report_name} ({year}.{quarter * 3:02d})"
+    return financials
+
+
+def pct_change(current: Optional[int], prior: Optional[int]) -> str:
+    if current is None or prior is None:
+        return "미확인"
+    if prior == 0:
+        return "n/a"
+    return f"{(current - prior) / abs(prior) * 100:+.1f}%"
+
+
+def margin_from_values(revenue: Optional[int], op: Optional[int]) -> str:
+    if not revenue or op is None:
+        return "미확인"
+    return f"{op / revenue * 100:.1f}%"
+
+
+def trend_comment(period: str, metrics: dict[str, Optional[int]], qoq: dict[str, str], yoy: dict[str, str], basis: str) -> str:
+    revenue_qoq = qoq.get("revenue", "미확인")
+    revenue_yoy = yoy.get("revenue", "미확인")
+    op_qoq = qoq.get("operating_profit", "미확인")
+    op_yoy = yoy.get("operating_profit", "미확인")
+    basis_label = "분기 실적" if basis == "quarter" else "누계 실적"
+    if basis == "cumulative":
+        return f"{period} {basis_label} 기준. 매출 YoY {revenue_yoy}; 영업이익 YoY {op_yoy}. QoQ는 누계 기준이라 해석 제외."
+    if "미확인" in {revenue_qoq, revenue_yoy, op_qoq, op_yoy}:
+        return f"{period} 기준 추세 일부 미확인. DART 단일회사 주요계정 제공 범위 확인 필요."
+    op = metrics.get("operating_profit")
+    if op is not None and op < 0:
+        return f"{period} {basis_label} 영업손실 구간. 매출 QoQ {revenue_qoq}, YoY {revenue_yoy}; 영업이익 QoQ {op_qoq}, YoY {op_yoy}."
+    return f"{period} {basis_label} 기준. 매출 QoQ {revenue_qoq}, YoY {revenue_yoy}; 영업이익 QoQ {op_qoq}, YoY {op_yoy}."
+
+
+def build_period_trend(corp_code: str, api_key: str, fs_div: str, financials: dict[str, object], basis: str) -> dict[str, str]:
+    year_value = financials.get("year")
+    quarter = quarter_from_report(financials)
+    if not isinstance(year_value, int) or quarter is None:
+        return {
+            "period": "미확인",
+            "revenue_qoq": "미확인",
+            "revenue_yoy": "미확인",
+            "op_qoq": "미확인",
+            "op_yoy": "미확인",
+            "trend_comment": "실적 기준 기간을 확인하지 못했습니다.",
+        }
+    if basis == "cumulative":
+        current = fetch_cumulative_metrics(corp_code, api_key, fs_div, year_value, quarter) or extract_metric_values(financials)
+        prior_q = None
+        prior_y = fetch_cumulative_metrics(corp_code, api_key, fs_div, year_value - 1, quarter)
+    else:
+        current = fetch_quarter_metrics(corp_code, api_key, fs_div, year_value, quarter) or extract_metric_values(financials)
+        prev_year, prev_quarter = previous_quarter(year_value, quarter)
+        prior_q = fetch_quarter_metrics(corp_code, api_key, fs_div, prev_year, prev_quarter)
+        prior_y = fetch_quarter_metrics(corp_code, api_key, fs_div, year_value - 1, quarter)
+    qoq = {
+        "revenue": pct_change(current.get("revenue"), prior_q.get("revenue") if prior_q else None),
+        "operating_profit": pct_change(current.get("operating_profit"), prior_q.get("operating_profit") if prior_q else None),
+    }
+    yoy = {
+        "revenue": pct_change(current.get("revenue"), prior_y.get("revenue") if prior_y else None),
+        "operating_profit": pct_change(current.get("operating_profit"), prior_y.get("operating_profit") if prior_y else None),
+    }
+    period = period_label(year_value, quarter)
+    return {
+        "period": period,
+        "revenue": format_krw(current.get("revenue")),
+        "operating_profit": format_krw(current.get("operating_profit")),
+        "op_margin": margin_from_values(current.get("revenue"), current.get("operating_profit")),
+        "net_income": format_krw(current.get("net_income")),
+        "revenue_qoq": qoq["revenue"],
+        "revenue_yoy": yoy["revenue"],
+        "op_qoq": qoq["operating_profit"],
+        "op_yoy": yoy["operating_profit"],
+        "trend_comment": trend_comment(period, current, qoq, yoy, basis),
     }
 
 
@@ -771,13 +973,22 @@ def detect_special_situations(disclosures: list[dict[str, str]]) -> str:
     return " / ".join(hits[:3]) if hits else "특이 공시 미탐지"
 
 
-def build_season_row(company: str, api_key: str, fs_div: str, ir_dir: Optional[Path]) -> dict[str, str]:
+def build_season_row(company: str, api_key: str, fs_div: str, ir_dir: Optional[Path], target_period: Optional[tuple[int, int]], basis: str) -> dict[str, str]:
     corp = resolve_corp(company, api_key)
     periodic = fetch_filings(corp["corp_code"], api_key)
     recent = fetch_recent_disclosures(corp["corp_code"], api_key)
-    financials = fetch_latest_financials(corp["corp_code"], api_key, fs_div, periodic)
+    selected: Optional[dict[str, str]]
+    if target_period:
+        year, quarter = target_period
+        financials = fetch_financials_for_quarter(corp["corp_code"], api_key, fs_div, year, quarter)
+        if not financials.get("rows"):
+            raise DartApiError(f"{company} {period_label(year, quarter)} 재무 주요계정 데이터가 없습니다.")
+        selected = find_filing_for_period(periodic, year, quarter)
+    else:
+        financials = fetch_latest_financials(corp["corp_code"], api_key, fs_div, periodic)
+        selected = financials.get("source_filing") if isinstance(financials.get("source_filing"), dict) else pick_business_report(periodic)
     summary = financial_summary(financials)
-    selected = financials.get("source_filing") or pick_business_report(periodic)
+    trend = build_period_trend(corp["corp_code"], api_key, fs_div, financials, basis)
     rcept_no = ""
     rcept_dt = ""
     report_nm = str(financials.get("report_name") or "미확인")
@@ -800,14 +1011,21 @@ def build_season_row(company: str, api_key: str, fs_div: str, ir_dir: Optional[P
         "company": company,
         "corp_code": corp.get("corp_code", ""),
         "stock_code": corp.get("stock_code", ""),
+        "period": trend["period"],
         "latest_report": report_nm,
         "rcept_dt": rcept_dt,
         "rcept_no": rcept_no,
         "fs_div": summary["fs_div"],
-        "revenue": summary["revenue"],
-        "operating_profit": summary["operating_profit"],
-        "op_margin": summary["op_margin"],
-        "net_income": summary["net_income"],
+        "basis": "분기" if basis == "quarter" else "누계",
+        "revenue": trend["revenue"],
+        "operating_profit": trend["operating_profit"],
+        "op_margin": trend["op_margin"],
+        "net_income": trend["net_income"],
+        "revenue_qoq": trend["revenue_qoq"],
+        "revenue_yoy": trend["revenue_yoy"],
+        "op_qoq": trend["op_qoq"],
+        "op_yoy": trend["op_yoy"],
+        "trend_comment": trend["trend_comment"],
         "assets": summary["assets"],
         "special_situations": detect_special_situations(recent),
         "ir_note": ir_note,
@@ -819,14 +1037,21 @@ SEASON_COLUMNS = [
     "company",
     "corp_code",
     "stock_code",
+    "period",
     "latest_report",
     "rcept_dt",
     "rcept_no",
     "fs_div",
+    "basis",
     "revenue",
     "operating_profit",
     "op_margin",
     "net_income",
+    "revenue_qoq",
+    "revenue_yoy",
+    "op_qoq",
+    "op_yoy",
+    "trend_comment",
     "assets",
     "special_situations",
     "ir_note",
@@ -932,6 +1157,8 @@ def season(
     append: bool = typer.Option(True, help="기존 테이블이 있으면 행을 추가"),
     ir_dir: Optional[Path] = typer.Option(None, help="회사명으로 저장된 IR 파일 폴더"),
     fs_div: str = typer.Option("CFS", help="재무제표 구분: CFS(연결) 또는 OFS(별도)"),
+    period: Optional[str] = typer.Option(None, "--period", help="특정 실적 기간. 예: 26.1Q, 2026Q1, 25.4Q"),
+    basis: str = typer.Option("quarter", "--basis", help="실적 기준: quarter(분기 실적) 또는 cumulative(누계 실적)"),
 ) -> None:
     """최신 분기/반기/사업보고서 기준으로 경쟁사 실적 테이블을 생성하거나 업데이트합니다."""
     api_key = os.environ.get("DART_API_KEY", "").strip()
@@ -941,11 +1168,15 @@ def season(
     names = split_peers(companies)
     if not names:
         raise typer.BadParameter("--companies must include at least one company")
+    normalized_basis = basis.strip().lower()
+    if normalized_basis not in {"quarter", "cumulative"}:
+        raise typer.BadParameter("--basis는 quarter 또는 cumulative만 지원합니다.")
+    target_period = parse_period_option(period)
     rows: list[dict[str, str]] = []
     for name in names:
         try:
             console.print(f"[cyan]Updating[/cyan] {name}")
-            rows.append(build_season_row(name, api_key, fs_div.upper(), ir_dir))
+            rows.append(build_season_row(name, api_key, fs_div.upper(), ir_dir, target_period, normalized_basis))
         except Exception as exc:
             rows.append(
                 {
@@ -953,14 +1184,21 @@ def season(
                     "company": name,
                     "corp_code": "",
                     "stock_code": "",
+                    "period": "조회 실패",
                     "latest_report": "조회 실패",
                     "rcept_dt": "",
                     "rcept_no": "",
                     "fs_div": fs_div.upper(),
+                    "basis": "분기" if normalized_basis == "quarter" else "누계",
                     "revenue": "미확인",
                     "operating_profit": "미확인",
                     "op_margin": "미확인",
                     "net_income": "미확인",
+                    "revenue_qoq": "미확인",
+                    "revenue_yoy": "미확인",
+                    "op_qoq": "미확인",
+                    "op_yoy": "미확인",
+                    "trend_comment": f"추세 계산 실패: {exc}",
                     "assets": "미확인",
                     "special_situations": f"오류: {exc}",
                     "ir_note": "미확인",
@@ -972,10 +1210,10 @@ def season(
     write_season_table(rows, table_path, append=append)
 
     table = Table(title="Earnings Season Update")
-    for col in ["company", "latest_report", "revenue", "operating_profit", "op_margin", "special_situations"]:
+    for col in ["company", "period", "basis", "latest_report", "revenue", "revenue_qoq", "revenue_yoy", "operating_profit", "op_qoq", "op_yoy", "op_margin", "trend_comment", "special_situations"]:
         table.add_column(col)
     for row in rows:
-        table.add_row(*(row.get(col, "") for col in ["company", "latest_report", "revenue", "operating_profit", "op_margin", "special_situations"]))
+        table.add_row(*(row.get(col, "") for col in ["company", "period", "basis", "latest_report", "revenue", "revenue_qoq", "revenue_yoy", "operating_profit", "op_qoq", "op_yoy", "op_margin", "trend_comment", "special_situations"]))
     console.print(table)
     console.print(f"[green]Table updated:[/green] {table_path}")
 

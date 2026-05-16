@@ -67,11 +67,33 @@ dart-audit season \
   --table outputs/tables/game-competitors.md
 ```
 
+특정 분기 실적을 맞춰 보고 싶으면 `--period`를 사용합니다.
+
+```bash
+dart-audit season \
+  --companies "크래프톤,넷마블,엔씨소프트,카카오게임즈" \
+  --period 25.4Q \
+  --table outputs/tables/game-competitors-25-4q.md
+```
+
+기본값은 분기 실적 기준입니다. DART 보고서의 누계 숫자를 그대로 보고 싶을 때만 `--basis cumulative`을 사용합니다.
+
+```bash
+dart-audit season \
+  --companies "크래프톤,넷마블,엔씨소프트,카카오게임즈" \
+  --period 25.4Q \
+  --basis cumulative
+```
+
 하는 일:
 
 - 회사명을 OpenDART `corp_code`로 매칭
 - 최신 분기보고서, 반기보고서, 사업보고서 중 가장 최근 공시 선택
+- `26.1Q`, `25.4Q`처럼 실적 기준 기간 표시
+- `--period 25.4Q`처럼 특정 분기를 지정해 회사별 기준 기간 통일
 - 매출, 영업이익, 영업이익률, 순이익, 자산 추출
+- 매출과 영업이익의 QoQ, YoY 증감률 계산
+- 추세 코멘트 자동 생성
 - 정정, 주요사항보고, 지분 변동, 투자 결정 등 특수 상황 공시 탐지
 - Markdown 또는 CSV 테이블 생성
 - 같은 테이블 경로를 쓰면 다음 분기에도 이어서 업데이트
@@ -226,9 +248,11 @@ dart-audit render 1
 - `data/research_cards.sqlite`: 누적 Research Card DB
 - `skills/story-to-dart-auditor/`: Codex Skill 본체
 
+경쟁사 실적 테이블에는 `period`, `basis`, `revenue_qoq`, `revenue_yoy`, `op_qoq`, `op_yoy`, `trend_comment`가 포함됩니다. 기본값인 `--basis quarter`에서는 1Q~3Q는 DART의 해당 분기 값을 사용하고, 4Q는 사업보고서 연간 값에서 3Q 누계를 차감해 계산합니다.
+
 생성 결과물과 DART 캐시는 git에 올리지 않도록 제외되어 있습니다.
 
-## Skillathon에서 보여줄 포인트
+## 개선하고자 한 업무 문제
 
 이 프로젝트는 "AI가 분석해줍니다"가 아니라, 실제 실무자가 매 분기 반복하는 워크플로우를 Codex Skill로 바꾼 사례입니다.
 
@@ -249,21 +273,3 @@ Skill 적용 후:
 - 기업을 단순 요약하지 않고, "좋아지고 있다는 주장"을 검증 가능한 claim으로 쪼갭니다.
 - Fact, Inference, Story, Missing Evidence, Contradicted를 분리해 과장된 해석을 줄입니다.
 - 결과를 HTML과 SQLite DB로 남겨 다음 분기에도 이어서 추적합니다.
-
-## 안전 원칙
-
-이 도구는 투자 추천 도구가 아닙니다.
-
-모든 리포트는 다음을 금지합니다.
-
-- 매수/매도 추천
-- 목표주가 제시
-- 투자 수익 보장
-- 출처 없는 숫자 생성
-- fallback/demo 데이터를 실제 DART 데이터처럼 표시
-
-모든 리포트에는 다음 disclaimer가 포함됩니다.
-
-```text
-본 자료는 투자 추천이 아니며, 매수/매도 권유, 목표주가 제시, 투자 수익 보장을 목적으로 하지 않습니다.
-```
