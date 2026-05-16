@@ -1,35 +1,35 @@
 ---
 name: story-to-dart-auditor
-description: "Automate earnings-season competitor review and market-story verification for Korean companies using OpenDART disclosures. Use when Codex is asked to analyze a company by name only, update a competitor earnings table, check latest quarterly/semiannual/annual filings, review IR/DART evidence, validate a market story or strategic hypothesis, classify claims into Fact/Inference/Story/Missing Evidence/Contradicted, produce an HTML/PDF/PNG one-pager, or save/list/show SQLite Research Cards. Primary users are strategy planners, business development, marketers, PMs, researchers, and non-developer operators; individual investors are a secondary non-recommendation use case."
+description: "한국 기업의 실적 시즌 경쟁사 분석과 시장 스토리 검증을 OpenDART 공시 기반으로 자동화한다. 회사명만으로 빠른 점검을 하거나, 회사명/스토리/비교군/산업 렌즈/회의 목적을 받아 최신 분기보고서·반기보고서·사업보고서, IR 자료, 재무 주요 계정, 특수 상황 공시를 확인한다. 결과는 Fact/Inference/Story/Missing Evidence/Contradicted로 분류하고 HTML/PDF/PNG 원페이퍼 및 SQLite Research Card로 저장한다. 전략기획, 사업개발, 마케팅, PM, 리서처, 비개발 실무자에게 우선 사용하며, 개인 투자자 용도는 투자 추천이 아닌 보조적 실적 점검으로 제한한다."
 ---
 
 # Story-to-DART Auditor
 
-## Overview
+## 언제 쓰나
 
-Use this skill to turn earnings-season disclosure work into a repeatable audit. The primary use case is a strategy/planning professional who otherwise has to open IR decks and DART filings one by one; the secondary use case is a non-professional investor who wants a safer, non-recommendation company performance check.
+사용자가 한국 기업의 실적, 경쟁사, DART 공시, IR 자료, 시장 스토리, 벤치마킹 가설을 확인해달라고 하면 이 스킬을 사용한다.
 
-## Quick Start
+대표 요청:
 
-Use one of two modes.
+- "크래프톤 최신 공시로 원페이퍼 만들어줘."
+- "게임사 경쟁사 실적 테이블 업데이트해줘."
+- "이 회사가 진짜 좋아지고 있는지 확인해줘."
+- "글로벌 IP와 AI 전환 스토리가 DART 숫자로 확인되는지 봐줘."
+- "이번 분기 경쟁사 특수 상황 공시가 있었는지 정리해줘."
 
-### Mode A: Company-only quick check
+## 사용자에게 설명할 기본 구조
 
-Use when the user only gives a company name or asks "이 회사가 좋아지고 있는지 봐줘".
+기본 명령은 `audit`이다.
 
-```bash
-dart-audit company "크래프톤" --peers "넷마블,엔씨소프트,카카오게임즈" --industry game
-```
+`company`는 별도 분석 체계가 아니라 회사명만 넣고 빠르게 실행하는 단축 명령이다. 사용자가 헷갈려 하면 `audit --company "회사명"`만 안내한다.
 
-### Mode B: Context-rich story audit
+`peers`는 별도 명령이 아니라 비교군 옵션이다. 분석 대상 회사와 비교할 회사를 쉼표로 넣으면 된다.
 
-Use when the user provides a story, thesis, theme, peer group, or meeting purpose.
+## 추천 사용법
 
-```bash
-dart-audit audit --company "크래프톤" --story "글로벌 IP와 AI 전환으로 장기 성장성이 높다는 주장" --peers "넷마블,엔씨소프트,카카오게임즈" --industry game --purpose "전략기획 회의용 경쟁사 벤치마킹" --output html,pdf,png,db
-```
+### 1. 실적 시즌 경쟁사 테이블
 
-For 실적 시즌 경쟁사 테이블 업데이트, run:
+경쟁사 여러 곳을 한 번에 업데이트할 때 사용한다.
 
 ```bash
 dart-audit season \
@@ -37,104 +37,116 @@ dart-audit season \
   --table outputs/tables/game-competitors.md
 ```
 
-This creates or appends a table with latest DART periodic filing, revenue, operating profit, operating margin, net income, special situations, and optional IR notes.
+결과:
 
-For a single story audit, run the bundled CLI from this skill folder:
+- 최신 분기/반기/사업보고서 확인
+- 매출, 영업이익, 영업이익률, 순이익, 자산 추출
+- 특수 상황 공시 탐지
+- Markdown 또는 CSV 테이블 생성/추가
+
+### 2. 회사명만 넣는 빠른 점검
 
 ```bash
-python3 scripts/dart_audit.py audit \
+dart-audit audit \
+  --company "크래프톤" \
+  --peers "넷마블,엔씨소프트,카카오게임즈" \
+  --industry game
+```
+
+동일한 단축 명령:
+
+```bash
+dart-audit company "크래프톤" \
+  --peers "넷마블,엔씨소프트,카카오게임즈" \
+  --industry game
+```
+
+### 3. 스토리 검증 리포트
+
+```bash
+dart-audit audit \
   --company "크래프톤" \
   --story "글로벌 IP와 AI 전환으로 장기 성장성이 높다는 주장" \
   --peers "넷마블,엔씨소프트,카카오게임즈" \
   --industry game \
-  --purpose "전략기획 회의용" \
+  --purpose "전략기획 회의용 경쟁사 벤치마킹" \
   --output html,db
 ```
 
-If a `dart-audit` wrapper is available in the current project PATH, use:
+### 4. IR 파일까지 같이 확인
 
 ```bash
-dart-audit audit --company "크래프톤" --story "글로벌 IP와 AI 전환으로 장기 성장성이 높다는 주장" --peers "넷마블,엔씨소프트,카카오게임즈" --industry game --purpose "전략기획 회의용" --output html,db
+dart-audit audit \
+  --company "크래프톤" \
+  --story "신작과 글로벌 IP 확장으로 성장성이 개선되고 있다는 주장" \
+  --peers "넷마블,엔씨소프트,카카오게임즈" \
+  --ir-file sample-ir-note.md \
+  --output html,db
 ```
 
-Add `--fallback` when live DART fails and a demo-quality fixture result is acceptable. Add `--force-fallback` only for offline demos.
+PDF, txt, md, HTML 계열 텍스트를 보조 근거로 읽을 수 있다.
 
-If the user has an IR deck or earnings memo, add `--ir-file path/to/file.pdf`. PDF, text, markdown, and HTML-like text files are supported as supplemental evidence.
+## 실행 원칙
 
-If the user has a folder of IR files, name files with company names and add `--ir-dir path/to/ir-folder` to `season`.
+1. 회사명과 비교군을 확인한다.
+2. `DART_API_KEY`가 있으면 live OpenDART를 우선 사용한다.
+3. 최신 정기공시는 분기보고서, 반기보고서, 사업보고서 중 가장 최근 것을 사용한다.
+4. DART 실패 시 사용자가 `--fallback`을 허용했을 때만 fixture를 사용한다.
+5. 숫자, 날짜, 출처를 지어내지 않는다.
+6. 스토리 검증 결과를 반드시 Fact, Inference, Story, Missing Evidence, Contradicted로 구분한다.
+7. 리포트는 투자 추천이 아니라 공시 기반 업무 보조 자료로 작성한다.
 
-## Workflow
+## 결과물
 
-1. Capture the input:
-   - Company name
-   - Or multiple competitor names for earnings-season table updates
-   - Market story or strategic hypothesis
-   - Peer group
-   - Industry lens
-   - Purpose/audience
+`audit` 결과:
 
-2. Decompose the story:
-   - Break the narrative into atomic claims.
-   - Identify the evidence needed for each claim.
-   - Keep claim text close to the user's wording.
+- Story Verification Score
+- Claim classification table
+- Peer snapshot
+- Red flags
+- Next Filing Watchlist
+- 30초 보고 스크립트
+- HTML one-pager
+- SQLite Research Card
 
-3. Collect evidence:
-   - Use live OpenDART by default when `DART_API_KEY` is present.
-   - Resolve company name to `corp_code`, pull recent periodic filings, use the latest available periodic report (quarterly, semiannual, or annual), fetch financial statement major accounts, and search the filing body for story evidence.
-   - If `--ir-file` is provided, scan the local IR deck or memo for matching story signals and include it as supplemental evidence.
-   - Use fallback fixtures only when `--fallback` is set and DART fails, or when `--force-fallback` is explicitly requested.
-   - Never fabricate numbers, filing dates, or source labels.
+`season` 결과:
 
-4. Classify every claim:
-   - `Fact`: directly supported by evidence.
-   - `Inference`: derived from facts with a stated logic chain.
-   - `Story`: plausible narrative but not filing-proven.
-   - `Missing Evidence`: no sufficient evidence found.
-   - `Contradicted`: evidence conflicts with the claim.
+- 경쟁사 실적 테이블
+- 최신 공시명과 접수일
+- 주요 재무지표
+- 특수 상황 공시 요약
+- 선택적으로 IR 메모
 
-5. Generate outputs:
-   - Story Verification Score.
-   - Claim classification table.
-   - Peer snapshot.
-   - Red flags.
-   - Next Filing Watchlist.
-   - 30-second report script.
-   - HTML one-pager.
-   - SQLite Research Card.
+## 저장된 결과 확인
 
-## Safety Rules
+```bash
+dart-audit list
+dart-audit show 1
+dart-audit history --company "크래프톤"
+dart-audit render 1
+```
 
-Always enforce these constraints:
+## 안전 규칙
 
-- Do not provide buy/sell recommendations.
-- Do not provide target prices.
-- Do not promise or imply investment returns.
-- Do not present fixture/demo data as live DART data.
-- Do not invent numbers or sources.
-- Include this disclaimer in every report: "본 자료는 투자 추천이 아니며, 매수/매도 권유, 목표주가 제시, 투자 수익 보장을 목적으로 하지 않습니다."
+항상 지켜야 한다.
 
-## CLI Commands
+- 매수/매도 추천 금지
+- 목표주가 제시 금지
+- 투자 수익 보장 금지
+- fallback/demo 데이터를 live DART 데이터처럼 표현 금지
+- 출처 없는 숫자나 공시명 생성 금지
 
-- `audit`: Run a story audit and generate requested outputs.
-- `company`: Run a company-name-only quick check.
-- `season`: Build or append an earnings-season competitor table from latest DART quarterly, semiannual, or annual filings.
-- `list`: List saved Research Cards.
-- `show`: Show one Research Card.
-- `history`: Show audit history by company or keyword.
-- `render`: Re-render an existing Research Card to HTML.
+모든 리포트에는 다음 disclaimer를 포함한다.
 
-## Resources
+```text
+본 자료는 투자 추천이 아니며, 매수/매도 권유, 목표주가 제시, 투자 수익 보장을 목적으로 하지 않습니다.
+```
 
-- `scripts/dart_audit.py`: Typer-based CLI with fallback fixture demo, HTML generation, and SQLite storage.
-- OpenDART live endpoints used by the script: `corpCode.xml`, `list.json`, `fnlttSinglAcnt.json`, `document.xml`.
-- `references/audit-policy.md`: classification, scoring, and safety policy.
-- `assets/one_pager_template.html`: self-contained HTML one-pager template.
+## 점수 해석
 
-## Output Interpretation
+Story Verification Score는 투자 매력도가 아니라, 현재 접근 가능한 공시로 스토리가 얼마나 확인되는지를 의미한다.
 
-Treat the score as "how well this story is evidenced by available disclosures", not as investment attractiveness.
-
-- 80-100: strongly supported by available evidence.
-- 60-79: directionally supported with notable gaps.
-- 40-59: mixed or weakly evidenced.
-- 0-39: mostly unsupported, contradicted, or missing evidence.
+- 80-100: 공시 근거가 강함
+- 60-79: 방향성은 있으나 중요한 공백 존재
+- 40-59: 근거가 혼재되거나 약함
+- 0-39: 대부분 미확인, 반박, 또는 증거 부족

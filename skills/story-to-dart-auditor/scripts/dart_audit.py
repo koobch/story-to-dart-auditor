@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Story-to-DART Auditor CLI.
 
-Fallback-first demo tool for Skillathon submissions.
+Skillathon 제출용 DART 공시 기반 스토리 검증 도구.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from rich.console import Console
 from rich.table import Table
 
 
-app = typer.Typer(help="Validate market stories against DART-style evidence.")
+app = typer.Typer(help="한국 기업의 최신 DART 공시로 실적, 경쟁사, 시장 스토리를 검증합니다.")
 console = Console()
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
@@ -857,19 +857,20 @@ def write_season_table(rows: list[dict[str, str]], table_path: Path, append: boo
 
 @app.command()
 def audit(
-    company: str = typer.Option(..., help="Korean company name"),
-    story: str = typer.Option(..., help="Market story or strategic hypothesis"),
-    peers: str = typer.Option("", help="Comma-separated peer companies"),
-    industry: str = typer.Option("general", help="Industry lens"),
-    purpose: str = typer.Option("", help="Audience or meeting purpose"),
-    output: str = typer.Option("html,db", help="Comma-separated outputs: html,db"),
-    fallback: bool = typer.Option(False, help="Allow fixture fallback if DART fails"),
-    force_fallback: bool = typer.Option(False, help="Skip DART and use fixture demo data"),
-    ir_file: Optional[Path] = typer.Option(None, help="Optional IR deck/text/PDF file to scan as supplemental evidence"),
-    fs_div: str = typer.Option("CFS", help="Financial statement scope: CFS or OFS"),
-    db_path: Path = typer.Option(DEFAULT_DB, help="SQLite DB path"),
+    company: str = typer.Option(..., help="분석할 한국 회사명"),
+    story: Optional[str] = typer.Option(None, help="검증할 시장 스토리나 전략 가설. 비워두면 기본 실적 점검 스토리를 사용합니다."),
+    peers: str = typer.Option("", help="쉼표로 구분한 비교 회사명"),
+    industry: str = typer.Option("general", help="산업 렌즈. 예: game, platform, ecommerce"),
+    purpose: str = typer.Option("", help="보고 목적 또는 회의 맥락"),
+    output: str = typer.Option("html,db", help="생성할 결과물. 예: html,db 또는 html,pdf,png,db"),
+    fallback: bool = typer.Option(False, help="DART 조회 실패 시 데모 fixture 사용 허용"),
+    force_fallback: bool = typer.Option(False, help="DART 조회를 건너뛰고 데모 fixture만 사용"),
+    ir_file: Optional[Path] = typer.Option(None, help="추가로 읽을 IR 자료/PDF/메모 파일"),
+    fs_div: str = typer.Option("CFS", help="재무제표 구분: CFS(연결) 또는 OFS(별도)"),
+    db_path: Path = typer.Option(DEFAULT_DB, help="SQLite DB 경로"),
 ) -> None:
-    """Run a story audit."""
+    """회사 실적과 시장 스토리를 최신 DART 공시로 검증합니다."""
+    resolved_story = story or "최근 실적과 공시 기준으로 이 회사가 좋아지고 있는지, 특수 상황은 무엇인지 확인"
     api_key = os.environ.get("DART_API_KEY", "").strip()
     live_evidence: Optional[dict[str, object]] = None
     mode = "fallback_fixture"
@@ -899,7 +900,7 @@ def audit(
 
     request = {
         "company": company,
-        "story": story,
+        "story": resolved_story,
         "peers": peers,
         "industry": industry,
         "purpose": purpose,
@@ -909,7 +910,7 @@ def audit(
         "ir_file": str(ir_file) if ir_file else None,
         "fs_div": fs_div.upper(),
     }
-    result = build_result(company, story, peers, industry, purpose, mode, live_evidence=live_evidence, api_key=api_key if live_evidence else None, fs_div=fs_div.upper())
+    result = build_result(company, resolved_story, peers, industry, purpose, mode, live_evidence=live_evidence, api_key=api_key if live_evidence else None, fs_div=fs_div.upper())
     outputs = {item.strip() for item in output.split(",") if item.strip()}
     report_path: Optional[Path] = None
     if {"html", "pdf", "png"} & outputs:
@@ -926,13 +927,13 @@ def audit(
 
 @app.command()
 def season(
-    companies: str = typer.Option(..., help="Comma-separated companies to update"),
-    table_path: Optional[Path] = typer.Option(None, "--table", help="Markdown or CSV table path to create/append"),
-    append: bool = typer.Option(True, help="Append rows when table exists"),
-    ir_dir: Optional[Path] = typer.Option(None, help="Optional folder containing company-named IR files"),
-    fs_div: str = typer.Option("CFS", help="Financial statement scope: CFS or OFS"),
+    companies: str = typer.Option(..., help="쉼표로 구분한 업데이트 대상 회사명"),
+    table_path: Optional[Path] = typer.Option(None, "--table", help="생성하거나 이어 쓸 Markdown/CSV 테이블 경로"),
+    append: bool = typer.Option(True, help="기존 테이블이 있으면 행을 추가"),
+    ir_dir: Optional[Path] = typer.Option(None, help="회사명으로 저장된 IR 파일 폴더"),
+    fs_div: str = typer.Option("CFS", help="재무제표 구분: CFS(연결) 또는 OFS(별도)"),
 ) -> None:
-    """Build or append an earnings-season competitor table from latest DART filings."""
+    """최신 분기/반기/사업보고서 기준으로 경쟁사 실적 테이블을 생성하거나 업데이트합니다."""
     api_key = os.environ.get("DART_API_KEY", "").strip()
     if not api_key:
         console.print("[red]DART_API_KEY 환경변수가 필요합니다.[/red]")
@@ -981,15 +982,15 @@ def season(
 
 @app.command()
 def company(
-    company_name: str = typer.Argument(..., help="Company name"),
-    peers: str = typer.Option("", help="Optional comma-separated peer companies"),
-    industry: str = typer.Option("general", help="Industry lens"),
-    purpose: str = typer.Option("회사명 기반 빠른 실적 점검", help="Purpose"),
-    output: str = typer.Option("html,db", help="Comma-separated outputs: html,pdf,png,db"),
-    fallback: bool = typer.Option(False, help="Allow fixture fallback if DART fails"),
-    fs_div: str = typer.Option("CFS", help="Financial statement scope: CFS or OFS"),
+    company_name: str = typer.Argument(..., help="분석할 회사명"),
+    peers: str = typer.Option("", help="쉼표로 구분한 비교 회사명"),
+    industry: str = typer.Option("general", help="산업 렌즈"),
+    purpose: str = typer.Option("회사명 기반 빠른 실적 점검", help="보고 목적"),
+    output: str = typer.Option("html,db", help="생성할 결과물. 예: html,db 또는 html,pdf,png,db"),
+    fallback: bool = typer.Option(False, help="DART 조회 실패 시 데모 fixture 사용 허용"),
+    fs_div: str = typer.Option("CFS", help="재무제표 구분: CFS(연결) 또는 OFS(별도)"),
 ) -> None:
-    """Run a company-name-only quick audit."""
+    """회사명만 넣는 빠른 점검용 단축 명령입니다. 내부적으로 audit을 실행합니다."""
     quick_story = "최근 실적과 공시 기준으로 이 회사가 좋아지고 있는지, 특수 상황은 무엇인지 확인"
     audit(
         company=company_name,
