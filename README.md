@@ -205,8 +205,6 @@ echo $DART_API_KEY
 
 주의사항:
 
-- API Key는 개인 인증키입니다. GitHub public repo, README, issue, commit history에 올리지 마세요.
-- 심사자나 다른 사용자는 본인 OpenDART 계정으로 키를 발급받아 실행해야 합니다.
 - 키가 없거나 현장 네트워크가 불안정한 경우 `--force-fallback`으로 데모를 실행할 수 있습니다.
 - 이 프로젝트는 OpenDART API의 `crtfc_key` 파라미터에 `DART_API_KEY` 값을 넣어 호출합니다.
 
