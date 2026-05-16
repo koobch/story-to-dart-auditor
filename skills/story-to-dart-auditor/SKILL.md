@@ -96,6 +96,19 @@ PDF, txt, md, HTML 계열 텍스트를 보조 근거로 읽을 수 있다.
 6. 스토리 검증 결과를 반드시 Fact, Inference, Story, Missing Evidence, Contradicted로 구분한다.
 7. 리포트는 투자 추천이 아니라 공시 기반 업무 보조 자료로 작성한다.
 
+## DART API 키 안내
+
+live DART 조회에는 사용자별 OpenDART API 인증키가 필요하다.
+
+- 키는 레포에 포함하지 않는다.
+- 사용자는 OpenDART 사이트에서 직접 인증키를 발급받아야 한다.
+- 로컬 환경변수는 `DART_API_KEY`로 설정한다.
+- 키가 없으면 live 조회는 실패하므로, 데모 목적이면 `--force-fallback` 또는 `--fallback`을 안내한다.
+
+```bash
+export DART_API_KEY="발급받은_API_KEY"
+```
+
 ## 결과물
 
 `audit` 결과:

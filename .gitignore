@@ -6,3 +6,5 @@ outputs/tables/*.csv
 __pycache__/
 *.pyc
 .DS_Store
+.env
+.env.local

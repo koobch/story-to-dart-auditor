@@ -144,6 +144,44 @@ export PATH="$PWD/bin:$PATH"
 export DART_API_KEY="your-opendart-api-key"
 ```
 
+## DART API 키 발급
+
+실제 DART 공시를 조회하려면 OpenDART API 인증키가 필요합니다. 이 키는 레포에 포함되어 있지 않으며, 사용자별로 직접 발급받아야 합니다.
+
+발급 절차:
+
+1. OpenDART 사이트에 접속합니다: https://opendart.fss.or.kr
+2. 회원가입 또는 로그인을 진행합니다.
+3. 상단 메뉴에서 `인증키 신청/관리`로 이동합니다.
+4. `인증키 신청`에서 오픈API 이용약관에 동의하고 신청을 완료합니다.
+5. 신청 결과는 등록한 이메일로 발송됩니다.
+6. 발급된 API Key를 복사해 로컬 환경변수로 설정합니다.
+
+macOS 또는 Linux:
+
+```bash
+export DART_API_KEY="발급받은_API_KEY"
+```
+
+Windows PowerShell:
+
+```powershell
+$env:DART_API_KEY="발급받은_API_KEY"
+```
+
+설정 확인:
+
+```bash
+echo $DART_API_KEY
+```
+
+주의사항:
+
+- API Key는 개인 인증키입니다. GitHub public repo, README, issue, commit history에 올리지 마세요.
+- 심사자나 다른 사용자는 본인 OpenDART 계정으로 키를 발급받아 실행해야 합니다.
+- 키가 없거나 현장 네트워크가 불안정한 경우 `--force-fallback`으로 데모를 실행할 수 있습니다.
+- 이 프로젝트는 OpenDART API의 `crtfc_key` 파라미터에 `DART_API_KEY` 값을 넣어 호출합니다.
+
 가장 빠른 라이브 데모:
 
 ```bash
