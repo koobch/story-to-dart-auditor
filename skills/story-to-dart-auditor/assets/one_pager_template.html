@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+  <style>
+    :root { --ink:#172026; --muted:#64707d; --line:#d7dee6; --bg:#f5f7fa; --panel:#ffffff; --accent:#0f766e; --risk:#b42318; --warn:#b54708; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; background: var(--bg); color: var(--ink); line-height: 1.55; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    header { border-bottom: 3px solid var(--ink); padding-bottom: 18px; margin-bottom: 18px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
+    h1 { margin: 0; font-size: 30px; letter-spacing: 0; }
+    h2 { margin: 28px 0 10px; font-size: 18px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    .meta { color: var(--muted); font-size: 13px; }
+    .score { background: var(--ink); color: #fff; border-radius: 8px; padding: 16px 20px; min-width: 150px; text-align: center; }
+    .score strong { display: block; font-size: 42px; line-height: 1; }
+    .grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 18px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+    table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); }
+    th, td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 13px; }
+    th { background: #eef2f6; font-weight: 700; }
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 12px; font-weight: 700; border: 1px solid var(--line); background: #fff; }
+    .Fact { color: #05603a; }
+    .Inference { color: #175cd3; }
+    .Story { color: #7a2e0e; }
+    .Missing-Evidence { color: #93370d; }
+    .Contradicted { color: #b42318; }
+    ul { margin: 8px 0 0 20px; padding: 0; }
+    .script { font-size: 18px; background: #ecfdf3; border-left: 5px solid var(--accent); }
+    .disclaimer { margin-top: 22px; padding: 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; color: #7a2e0e; font-weight: 700; }
+    @media (max-width: 800px) { main { padding: 16px; } header, .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>{{ company }} Story-to-DART Auditor</h1>
+      <div class="meta">{{ purpose }} · {{ industry }} · {{ generated_at }} · mode={{ mode }}</div>
+      <p><strong>Story:</strong> {{ story }}</p>
+    </div>
+    <div class="score"><span>Story Verification Score</span><strong>{{ score }}</strong><span>{{ verdict }}</span></div>
+  </header>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Score Breakdown</h2>
+      <table>
+        <tr><th>Component</th><th>Points</th><th>Rationale</th></tr>
+        {% for item in score_breakdown %}
+        <tr><td>{{ item.component }}</td><td>{{ item.points }}</td><td>{{ item.rationale }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h2>Red Flags</h2>
+      <ul>{% for item in red_flags %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+  </section>
+
+  {% if financial_summary %}
+  <h2>DART Financial Snapshot</h2>
+  <table>
+    <tr><th>Period</th><th>Scope</th><th>Revenue</th><th>Operating Profit</th><th>OP Margin</th><th>Net Income</th><th>Assets</th></tr>
+    <tr>
+      <td>{{ financial_summary.period }}</td>
+      <td>{{ financial_summary.fs_div }}</td>
+      <td>{{ financial_summary.revenue }}</td>
+      <td>{{ financial_summary.operating_profit }}</td>
+      <td>{{ financial_summary.op_margin }}</td>
+      <td>{{ financial_summary.net_income }}</td>
+      <td>{{ financial_summary.assets }}</td>
+    </tr>
+  </table>
+  {% endif %}
+
+  {% if recent_filings %}
+  <h2>Recent DART Filings</h2>
+  <table>
+    <tr><th>Date</th><th>Report</th><th>Receipt No.</th><th>Submitter</th></tr>
+    {% for filing in recent_filings %}
+    <tr><td>{{ filing.rcept_dt }}</td><td>{{ filing.report_nm }}</td><td>{{ filing.rcept_no }}</td><td>{{ filing.flr_nm }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
+  {% if ir_file %}
+  <h2>IR Supplemental Evidence</h2>
+  <table>
+    <tr><th>IR File</th><th>Matched Signals</th></tr>
+    <tr>
+      <td>{{ ir_file }}</td>
+      <td>{% for key, snippet in ir_snippets.items() %}<strong>{{ key }}</strong>: {{ snippet }}<br>{% endfor %}</td>
+    </tr>
+  </table>
+  {% endif %}
+
+  <h2>Fact / Inference / Story / Missing Evidence / Contradicted</h2>
+  <table>
+    <tr><th>Claim</th><th>Classification</th><th>Evidence</th><th>Rationale</th></tr>
+    {% for finding in findings %}
+    <tr>
+      <td>{{ finding.claim }}</td>
+      <td><span class="badge {{ finding.class_css }}">{{ finding.classification }}</span></td>
+      <td>{{ finding.evidence }}</td>
+      <td>{{ finding.rationale }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Peer Snapshot</h2>
+  <table>
+    <tr><th>Company</th><th>Disclosure Signal</th><th>Growth Story Signal</th><th>Evidence Level</th></tr>
+    {% for peer in peers %}
+    <tr><td>{{ peer.company }}</td><td>{{ peer.disclosure_signal }}</td><td>{{ peer.story_signal }}</td><td>{{ peer.evidence_level }}</td></tr>
+    {% endfor %}
+  </table>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>Next Filing Watchlist</h2>
+      <ul>{% for item in watchlist %}<li>{{ item }}</li>{% endfor %}</ul>
+    </div>
+    <div class="panel script">
+      <h2>30초 보고 스크립트</h2>
+      <p>{{ script_30s }}</p>
+    </div>
+  </section>
+
+  <div class="disclaimer">{{ disclaimer }}</div>
+</main>
+</body>
+</html>

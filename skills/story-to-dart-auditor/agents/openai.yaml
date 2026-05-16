@@ -1,0 +1,4 @@
+interface:
+  display_name: "Story-to-DART Auditor"
+  short_description: "Validate market stories against DART filings"
+  default_prompt: "Use $story-to-dart-auditor to test a Korean company growth story against DART-style evidence."
