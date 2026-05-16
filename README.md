@@ -2,7 +2,8 @@
 
 실적 시즌에 반복되는 경쟁사 공시 확인, IR 자료 읽기, 숫자 정리, 특이사항 체크, 회의용 원페이퍼 작성을 Codex Skill로 줄이는 프로젝트입니다.
 
-<p><strong><span style="color:red">* 본 Skill 실행을 위해서는 DART API 발급이 필요합니다.</span> <a href="#dart-api-키-발급">발급하기</a></strong></p>
+> [!IMPORTANT]
+> 본 Skill 실행을 위해서는 DART API 발급이 필요합니다. [발급하기](#dart-api-키-발급)
 
 Story-to-DART Auditor는 한국 기업의 최신 DART 정기공시를 기준으로 실적과 스토리를 함께 점검합니다. 단순 재무 요약기가 아니라, 사용자가 갖고 있는 시장 스토리나 경쟁사 벤치마킹 가설을 공시 근거로 검증하는 업무 보조 스킬입니다.
 
@@ -160,6 +161,7 @@ dart-audit audit \
 ```bash
 git clone https://github.com/koobch/story-to-dart-auditor.git
 cd story-to-dart-auditor
+python3 -m pip install -r requirements.txt
 export PATH="$PWD/bin:$PATH"
 export DART_API_KEY="your-opendart-api-key"
 ```
@@ -181,6 +183,12 @@ macOS 또는 Linux:
 
 ```bash
 export DART_API_KEY="발급받은_API_KEY"
+```
+
+또는 프로젝트 루트에 `.env` 파일을 만들고 다음처럼 저장해도 됩니다.
+
+```env
+DART_API_KEY=발급받은_API_KEY
 ```
 
 Windows PowerShell:

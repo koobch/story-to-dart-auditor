@@ -115,7 +115,7 @@ live DART 조회에는 사용자별 OpenDART API 인증키가 필요하다.
 
 - 키는 레포에 포함하지 않는다.
 - 사용자는 OpenDART 사이트에서 직접 인증키를 발급받아야 한다.
-- 로컬 환경변수는 `DART_API_KEY`로 설정한다.
+- 로컬 환경변수 또는 프로젝트 루트 `.env` 파일에 `DART_API_KEY`로 설정한다.
 - 키가 없으면 live 조회는 실패하므로, 데모 목적이면 `--force-fallback` 또는 `--fallback`을 안내한다.
 
 ```bash
@@ -128,6 +128,7 @@ export DART_API_KEY="발급받은_API_KEY"
 
 - Story Verification Score
 - Claim classification table
+- 분기 실적 기준 period, QoQ, YoY, trend comment
 - Peer snapshot
 - Red flags
 - Next Filing Watchlist
@@ -140,6 +141,7 @@ export DART_API_KEY="발급받은_API_KEY"
 - 경쟁사 실적 테이블
 - 최신 공시명과 접수일
 - 주요 재무지표
+- QoQ, YoY, trend comment
 - 특수 상황 공시 요약
 - 선택적으로 IR 메모
 

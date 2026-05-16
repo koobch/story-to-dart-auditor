@@ -75,6 +75,24 @@
   </table>
   {% endif %}
 
+  {% if financial_trend %}
+  <h2>Quarter Trend Check</h2>
+  <table>
+    <tr><th>Period</th><th>Basis</th><th>Revenue</th><th>Revenue QoQ</th><th>Revenue YoY</th><th>Operating Profit</th><th>OP QoQ</th><th>OP YoY</th><th>Trend Comment</th></tr>
+    <tr>
+      <td>{{ financial_trend.period }}</td>
+      <td>분기</td>
+      <td>{{ financial_trend.revenue }}</td>
+      <td>{{ financial_trend.revenue_qoq }}</td>
+      <td>{{ financial_trend.revenue_yoy }}</td>
+      <td>{{ financial_trend.operating_profit }}</td>
+      <td>{{ financial_trend.op_qoq }}</td>
+      <td>{{ financial_trend.op_yoy }}</td>
+      <td>{{ financial_trend.trend_comment }}</td>
+    </tr>
+  </table>
+  {% endif %}
+
   {% if recent_filings %}
   <h2>Recent DART Filings</h2>
   <table>

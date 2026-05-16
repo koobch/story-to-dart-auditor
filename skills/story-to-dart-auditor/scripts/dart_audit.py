@@ -40,6 +40,7 @@ DEFAULT_CACHE_DIR = PROJECT_DIR / "data" / "cache"
 TEMPLATE_PATH = SKILL_DIR / "assets" / "one_pager_template.html"
 DISCLAIMER = "본 자료는 투자 추천이 아니며, 매수/매도 권유, 목표주가 제시, 투자 수익 보장을 목적으로 하지 않습니다."
 OPENDART_BASE = "https://opendart.fss.or.kr/api"
+DOTENV_LOADED = False
 COMPANY_ALIASES = {
     "엔씨소프트": "NC",
     "엔씨": "NC",
@@ -105,6 +106,30 @@ def slugify(text: str) -> str:
 
 def split_peers(peers: str) -> list[str]:
     return [p.strip() for p in peers.split(",") if p.strip()]
+
+
+def load_env_file(path: Path = PROJECT_DIR / ".env") -> None:
+    """프로젝트 루트의 .env를 읽어 환경변수에 보강한다."""
+    global DOTENV_LOADED
+    if DOTENV_LOADED:
+        return
+    DOTENV_LOADED = True
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def dart_api_key() -> str:
+    load_env_file()
+    return os.environ.get("DART_API_KEY", "").strip()
 
 
 def http_get_bytes(path: str, params: dict[str, object], timeout: int = 20) -> bytes:
@@ -633,11 +658,16 @@ def classify_claim(company: str, claim: str, live_evidence: Optional[dict[str, o
         if "성장" in claim:
             revenue = finance.get("revenue", "미확인")
             op_margin = finance.get("op_margin", "미확인")
+            trend = dict(live_evidence.get("financial_trend") or {})
+            trend_note = trend.get("trend_comment")
             if revenue != "미확인" or op_margin != "미확인":
+                evidence = f"DART 재무 snapshot: 매출 {revenue}, 영업이익률 {op_margin}"
+                if trend_note:
+                    evidence = f"{evidence} / {trend_note}"
                 return Finding(
                     claim,
                     "Inference",
-                    f"DART 재무 snapshot: 매출 {revenue}, 영업이익률 {op_margin}",
+                    evidence,
                     "성장성은 공시 재무와 전략 서술에서 도출되는 추론이며, 미래 성과 자체는 공시로 확정할 수 없다.",
                 )
             return Finding(
@@ -736,6 +766,7 @@ def collect_live_evidence(company: str, api_key: str, fs_div: str) -> dict[str, 
     filings = fetch_filings(corp["corp_code"], api_key)
     financials = fetch_latest_financials(corp["corp_code"], api_key, fs_div, filings)
     summary = financial_summary(financials)
+    trend = build_period_trend(corp["corp_code"], api_key, fs_div, financials, "quarter")
     selected = pick_business_report(filings)
     snippets: dict[str, str] = {}
     document_error = None
@@ -761,6 +792,7 @@ def collect_live_evidence(company: str, api_key: str, fs_div: str) -> dict[str, 
         "filings": filings[:8],
         "financials": financials,
         "financial_summary": summary,
+        "financial_trend": trend,
         "selected_filing": selected,
         "filing_label": filing_label,
         "snippets": snippets,
@@ -817,6 +849,7 @@ def build_result(
         "dart_company": live_evidence.get("corp") if live_evidence else None,
         "recent_filings": live_evidence.get("filings", []) if live_evidence else [],
         "financial_summary": live_evidence.get("financial_summary") if live_evidence else None,
+        "financial_trend": live_evidence.get("financial_trend") if live_evidence else None,
         "ir_file": live_evidence.get("ir_file") if live_evidence else None,
         "ir_snippets": live_evidence.get("ir_snippets", {}) if live_evidence else {},
         "red_flags": red_flags,
@@ -1080,6 +1113,11 @@ def write_season_table(rows: list[dict[str, str]], table_path: Path, append: boo
         table_path.write_text("# Earnings Season DART Table\n\n" + header + divider + body, encoding="utf-8")
 
 
+def compact_cell(value: str, limit: int = 42) -> str:
+    text = re.sub(r"\s+", " ", str(value)).strip()
+    return text if len(text) <= limit else f"{text[: limit - 1]}…"
+
+
 @app.command()
 def audit(
     company: str = typer.Option(..., help="분석할 한국 회사명"),
@@ -1096,7 +1134,7 @@ def audit(
 ) -> None:
     """회사 실적과 시장 스토리를 최신 DART 공시로 검증합니다."""
     resolved_story = story or "최근 실적과 공시 기준으로 이 회사가 좋아지고 있는지, 특수 상황은 무엇인지 확인"
-    api_key = os.environ.get("DART_API_KEY", "").strip()
+    api_key = dart_api_key()
     live_evidence: Optional[dict[str, object]] = None
     mode = "fallback_fixture"
     dart_error = None
@@ -1161,7 +1199,7 @@ def season(
     basis: str = typer.Option("quarter", "--basis", help="실적 기준: quarter(분기 실적) 또는 cumulative(누계 실적)"),
 ) -> None:
     """최신 분기/반기/사업보고서 기준으로 경쟁사 실적 테이블을 생성하거나 업데이트합니다."""
-    api_key = os.environ.get("DART_API_KEY", "").strip()
+    api_key = dart_api_key()
     if not api_key:
         console.print("[red]DART_API_KEY 환경변수가 필요합니다.[/red]")
         raise typer.Exit(2)
@@ -1210,11 +1248,22 @@ def season(
     write_season_table(rows, table_path, append=append)
 
     table = Table(title="Earnings Season Update")
-    for col in ["company", "period", "basis", "latest_report", "revenue", "revenue_qoq", "revenue_yoy", "operating_profit", "op_qoq", "op_yoy", "op_margin", "trend_comment", "special_situations"]:
-        table.add_column(col)
+    display_columns = [
+        ("company", "회사"),
+        ("period", "기간"),
+        ("basis", "기준"),
+        ("revenue", "매출"),
+        ("revenue_yoy", "매출 YoY"),
+        ("operating_profit", "영업이익"),
+        ("op_yoy", "OP YoY"),
+        ("op_margin", "OPM"),
+    ]
+    for _, label in display_columns:
+        table.add_column(label)
     for row in rows:
-        table.add_row(*(row.get(col, "") for col in ["company", "period", "basis", "latest_report", "revenue", "revenue_qoq", "revenue_yoy", "operating_profit", "op_qoq", "op_yoy", "op_margin", "trend_comment", "special_situations"]))
+        table.add_row(*(compact_cell(row.get(col, ""), 24) for col, _ in display_columns))
     console.print(table)
+    console.print("[dim]전체 컬럼은 저장된 Markdown/CSV 파일에서 확인하세요.[/dim]")
     console.print(f"[green]Table updated:[/green] {table_path}")
 
 
