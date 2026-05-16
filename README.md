@@ -4,6 +4,7 @@
 
 > [!IMPORTANT]
 > 본 Skill 실행을 위해서는 DART API 발급이 필요합니다. [발급하기](#dart-api-키-발급)
+> DART API 없이 데모만 실행하려면 `--force-fallback`을 사용하세요. [데모 실행 보기](#dart-api-없이-데모-실행)
 
 Story-to-DART Auditor는 한국 기업의 최신 DART 정기공시를 기준으로 실적과 스토리를 함께 점검합니다. 단순 재무 요약기가 아니라, 사용자가 갖고 있는 시장 스토리나 경쟁사 벤치마킹 가설을 공시 근거로 검증하는 업무 보조 스킬입니다.
 
@@ -216,7 +217,9 @@ dart-audit season \
   --table outputs/tables/game-competitors.md
 ```
 
-DART API가 없거나 현장 네트워크가 불안정하면 fallback으로 데모를 돌릴 수 있습니다.
+## DART API 없이 데모 실행
+
+DART API가 없거나 현장 네트워크가 불안정하면 `--force-fallback`으로 데모를 돌릴 수 있습니다. 이 옵션은 DART API를 호출하지 않고 내장 fixture 데이터만 사용합니다.
 
 ```bash
 dart-audit audit \
@@ -226,7 +229,7 @@ dart-audit audit \
   --industry game \
   --purpose "전략기획 회의용" \
   --output html,db \
-  --fallback
+  --force-fallback
 ```
 
 ## 저장된 결과 확인
