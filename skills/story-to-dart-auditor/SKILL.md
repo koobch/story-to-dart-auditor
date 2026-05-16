@@ -1,6 +1,6 @@
 ---
 name: story-to-dart-auditor
-description: "한국 기업의 실적 시즌 경쟁사 분석과 시장 스토리 검증을 OpenDART 공시 기반으로 자동화한다. 회사명만으로 빠른 점검을 하거나, 회사명/스토리/비교군/산업 렌즈/회의 목적을 받아 최신 분기보고서·반기보고서·사업보고서, IR 자료, 재무 주요 계정, 특수 상황 공시를 확인한다. 결과는 Fact/Inference/Story/Missing Evidence/Contradicted로 분류하고 HTML/PDF/PNG 원페이퍼 및 SQLite Research Card로 저장한다. 전략기획, 사업개발, 마케팅, PM, 리서처, 비개발 실무자에게 우선 사용하며, 개인 투자자 용도는 투자 추천이 아닌 보조적 실적 점검으로 제한한다."
+description: "한국 기업의 실적 시즌 경쟁사 분석과 시장 스토리 검증을 OpenDART 공시 기반으로 자동화한다. 회사명만으로 빠른 점검을 하거나, 회사명/스토리/비교군/산업 렌즈/회의 목적을 받아 최신 분기보고서·반기보고서·사업보고서, IR 자료, 재무 주요 계정, 특수 상황 공시를 확인한다. 결과는 사실(Fact), 추론(Inference), 스토리(Story), 근거 부족(Missing Evidence), 반박됨(Contradicted)으로 분류하고 HTML/PDF/PNG 원페이퍼 및 SQLite Research Card로 저장한다. 전략기획, 사업개발, 마케팅, PM, 리서처, 비개발 실무자에게 우선 사용하며, 개인 투자자 용도는 투자 추천이 아닌 보조적 실적 점검으로 제한한다."
 ---
 
 # Story-to-DART Auditor
@@ -106,7 +106,7 @@ PDF, txt, md, HTML 계열 텍스트를 보조 근거로 읽을 수 있다.
 3. 최신 정기공시는 분기보고서, 반기보고서, 사업보고서 중 가장 최근 것을 사용한다.
 4. DART 실패 시 사용자가 `--fallback`을 허용했을 때만 fixture를 사용한다.
 5. 숫자, 날짜, 출처를 지어내지 않는다.
-6. 스토리 검증 결과를 반드시 Fact, Inference, Story, Missing Evidence, Contradicted로 구분한다.
+6. 스토리 검증 결과를 반드시 사실(Fact), 추론(Inference), 스토리(Story), 근거 부족(Missing Evidence), 반박됨(Contradicted)으로 구분한다.
 7. 리포트는 투자 추천이 아니라 공시 기반 업무 보조 자료로 작성한다.
 
 ## DART API 키 안내
@@ -126,14 +126,14 @@ export DART_API_KEY="발급받은_API_KEY"
 
 `audit` 결과:
 
-- Story Verification Score
-- Claim classification table
-- 분기 실적 기준 period, QoQ, YoY, trend comment
-- Peer snapshot
-- Red flags
-- Next Filing Watchlist
+- 스토리 검증 점수(Story Verification Score)
+- 주장 분류표(Claim Classification Table)
+- 분기 실적 기준 기간(period), QoQ, YoY, 추세 코멘트(trend comment)
+- 비교군 스냅샷(Peer Snapshot)
+- 위험 신호(Red Flags)
+- 다음 공시 확인 목록(Next Filing Watchlist)
 - 30초 보고 스크립트
-- HTML one-pager
+- HTML 원페이퍼
 - SQLite Research Card
 
 `season` 결과:
@@ -172,7 +172,7 @@ dart-audit render 1
 
 ## 점수 해석
 
-Story Verification Score는 투자 매력도가 아니라, 현재 접근 가능한 공시로 스토리가 얼마나 확인되는지를 의미한다.
+스토리 검증 점수(Story Verification Score)는 투자 매력도가 아니라, 현재 접근 가능한 공시로 스토리가 얼마나 확인되는지를 의미한다.
 
 - 80-100: 공시 근거가 강함
 - 60-79: 방향성은 있으나 중요한 공백 존재

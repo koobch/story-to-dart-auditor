@@ -38,31 +38,31 @@
     <div>
       <h1>{{ company }} Story-to-DART Auditor</h1>
       <div class="meta">{{ purpose }} · {{ industry }} · {{ generated_at }} · mode={{ mode }}</div>
-      <p><strong>Story:</strong> {{ story }}</p>
+      <p><strong>검증할 스토리(Story):</strong> {{ story }}</p>
     </div>
-    <div class="score"><span>Story Verification Score</span><strong>{{ score }}</strong><span>{{ verdict }}</span></div>
+    <div class="score"><span>스토리 검증 점수</span><strong>{{ score }}</strong><span>{{ verdict }}</span></div>
   </header>
 
   <section class="grid">
     <div class="panel">
-      <h2>Score Breakdown</h2>
+      <h2>점수 구성(Score Breakdown)</h2>
       <table>
-        <tr><th>Component</th><th>Points</th><th>Rationale</th></tr>
+        <tr><th>항목</th><th>점수</th><th>판단 근거</th></tr>
         {% for item in score_breakdown %}
         <tr><td>{{ item.component }}</td><td>{{ item.points }}</td><td>{{ item.rationale }}</td></tr>
         {% endfor %}
       </table>
     </div>
     <div class="panel">
-      <h2>Red Flags</h2>
+      <h2>위험 신호(Red Flags)</h2>
       <ul>{% for item in red_flags %}<li>{{ item }}</li>{% endfor %}</ul>
     </div>
   </section>
 
   {% if financial_summary %}
-  <h2>DART Financial Snapshot</h2>
+  <h2>DART 재무 스냅샷(Financial Snapshot)</h2>
   <table>
-    <tr><th>Period</th><th>Scope</th><th>Revenue</th><th>Operating Profit</th><th>OP Margin</th><th>Net Income</th><th>Assets</th></tr>
+    <tr><th>기간</th><th>범위</th><th>매출</th><th>영업이익</th><th>영업이익률</th><th>순이익</th><th>자산</th></tr>
     <tr>
       <td>{{ financial_summary.period }}</td>
       <td>{{ financial_summary.fs_div }}</td>
@@ -76,9 +76,9 @@
   {% endif %}
 
   {% if financial_trend %}
-  <h2>Quarter Trend Check</h2>
+  <h2>분기 추세 점검(Quarter Trend Check)</h2>
   <table>
-    <tr><th>Period</th><th>Basis</th><th>Revenue</th><th>Revenue QoQ</th><th>Revenue YoY</th><th>Operating Profit</th><th>OP QoQ</th><th>OP YoY</th><th>Trend Comment</th></tr>
+    <tr><th>기간</th><th>기준</th><th>매출</th><th>매출 QoQ</th><th>매출 YoY</th><th>영업이익</th><th>OP QoQ</th><th>OP YoY</th><th>추세 코멘트</th></tr>
     <tr>
       <td>{{ financial_trend.period }}</td>
       <td>분기</td>
@@ -94,9 +94,9 @@
   {% endif %}
 
   {% if recent_filings %}
-  <h2>Recent DART Filings</h2>
+  <h2>최근 DART 공시(Recent Filings)</h2>
   <table>
-    <tr><th>Date</th><th>Report</th><th>Receipt No.</th><th>Submitter</th></tr>
+    <tr><th>접수일</th><th>공시명</th><th>접수번호</th><th>제출인</th></tr>
     {% for filing in recent_filings %}
     <tr><td>{{ filing.rcept_dt }}</td><td>{{ filing.report_nm }}</td><td>{{ filing.rcept_no }}</td><td>{{ filing.flr_nm }}</td></tr>
     {% endfor %}
@@ -104,9 +104,9 @@
   {% endif %}
 
   {% if ir_file %}
-  <h2>IR Supplemental Evidence</h2>
+  <h2>IR 보조 근거(Supplemental Evidence)</h2>
   <table>
-    <tr><th>IR File</th><th>Matched Signals</th></tr>
+    <tr><th>IR 파일</th><th>매칭된 신호</th></tr>
     <tr>
       <td>{{ ir_file }}</td>
       <td>{% for key, snippet in ir_snippets.items() %}<strong>{{ key }}</strong>: {{ snippet }}<br>{% endfor %}</td>
@@ -114,9 +114,9 @@
   </table>
   {% endif %}
 
-  <h2>Fact / Inference / Story / Missing Evidence / Contradicted</h2>
+  <h2>사실(Fact) / 추론(Inference) / 스토리(Story) / 근거 부족(Missing Evidence) / 반박됨(Contradicted)</h2>
   <table>
-    <tr><th>Claim</th><th>Classification</th><th>Evidence</th><th>Rationale</th></tr>
+    <tr><th>주장</th><th>분류</th><th>근거</th><th>판단 논리</th></tr>
     {% for finding in findings %}
     <tr>
       <td>{{ finding.claim }}</td>
@@ -127,9 +127,9 @@
     {% endfor %}
   </table>
 
-  <h2>Peer Snapshot</h2>
+  <h2>비교군 스냅샷(Peer Snapshot)</h2>
   <table>
-    <tr><th>Company</th><th>Disclosure Signal</th><th>Growth Story Signal</th><th>Evidence Level</th></tr>
+    <tr><th>회사</th><th>공시 신호</th><th>성장 스토리 신호</th><th>근거 수준</th></tr>
     {% for peer in peers %}
     <tr><td>{{ peer.company }}</td><td>{{ peer.disclosure_signal }}</td><td>{{ peer.story_signal }}</td><td>{{ peer.evidence_level }}</td></tr>
     {% endfor %}
@@ -137,7 +137,7 @@
 
   <section class="grid">
     <div class="panel">
-      <h2>Next Filing Watchlist</h2>
+      <h2>다음 공시 확인 목록(Next Filing Watchlist)</h2>
       <ul>{% for item in watchlist %}<li>{{ item }}</li>{% endfor %}</ul>
     </div>
     <div class="panel script">

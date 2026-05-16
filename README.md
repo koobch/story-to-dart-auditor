@@ -132,11 +132,11 @@ dart-audit audit \
 
 결과에는 다음 항목이 포함됩니다.
 
-- Story Verification Score
-- Fact / Inference / Story / Missing Evidence / Contradicted 분류
-- Peer snapshot
-- Red flags
-- Next Filing Watchlist
+- 스토리 검증 점수(Story Verification Score)
+- 사실(Fact) / 추론(Inference) / 스토리(Story) / 근거 부족(Missing Evidence) / 반박됨(Contradicted) 분류
+- 비교군 스냅샷(Peer Snapshot)
+- 위험 신호(Red Flags)
+- 다음 공시 확인 목록(Next Filing Watchlist)
 - 30초 보고 스크립트
 - HTML 원페이퍼
 - SQLite Research Card
@@ -277,5 +277,5 @@ Skill 적용 후:
 차별점은 세 가지입니다.
 
 - 기업을 단순 요약하지 않고, "좋아지고 있다는 주장"을 검증 가능한 claim으로 쪼갭니다.
-- Fact, Inference, Story, Missing Evidence, Contradicted를 분리해 과장된 해석을 줄입니다.
+- 사실(Fact), 추론(Inference), 스토리(Story), 근거 부족(Missing Evidence), 반박됨(Contradicted)을 분리해 과장된 해석을 줄입니다.
 - 결과를 HTML과 SQLite DB로 남겨 다음 분기에도 이어서 추적합니다.
