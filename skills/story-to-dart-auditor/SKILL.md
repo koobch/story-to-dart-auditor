@@ -1,6 +1,6 @@
 ---
 name: story-to-dart-auditor
-description: Validate Korean company market stories, strategic planning hypotheses, peer benchmarks, and executive meeting narratives against DART-style disclosure evidence. Use when Codex is asked to check whether a company story is supported by filings, classify claims into Fact/Inference/Story/Missing Evidence/Contradicted, produce a Story Verification Score, create an HTML one-pager, or save/list/show SQLite Research Cards. Especially useful for strategy planning, game industry research, competitor benchmarking, and non-investment disclosure-backed briefing workflows.
+description: "Automate earnings-season competitor review and market-story verification for Korean companies using OpenDART disclosures. Use when Codex is asked to analyze a company by name only, update a competitor earnings table, check latest quarterly/semiannual/annual filings, review IR/DART evidence, validate a market story or strategic hypothesis, classify claims into Fact/Inference/Story/Missing Evidence/Contradicted, produce an HTML/PDF/PNG one-pager, or save/list/show SQLite Research Cards. Primary users are strategy planners, business development, marketers, PMs, researchers, and non-developer operators; individual investors are a secondary non-recommendation use case."
 ---
 
 # Story-to-DART Auditor
@@ -11,7 +11,25 @@ Use this skill to turn earnings-season disclosure work into a repeatable audit. 
 
 ## Quick Start
 
-For 실적 시즌 경쟁사 업데이트, run:
+Use one of two modes.
+
+### Mode A: Company-only quick check
+
+Use when the user only gives a company name or asks "이 회사가 좋아지고 있는지 봐줘".
+
+```bash
+dart-audit company "크래프톤" --peers "넷마블,엔씨소프트,카카오게임즈" --industry game
+```
+
+### Mode B: Context-rich story audit
+
+Use when the user provides a story, thesis, theme, peer group, or meeting purpose.
+
+```bash
+dart-audit audit --company "크래프톤" --story "글로벌 IP와 AI 전환으로 장기 성장성이 높다는 주장" --peers "넷마블,엔씨소프트,카카오게임즈" --industry game --purpose "전략기획 회의용 경쟁사 벤치마킹" --output html,pdf,png,db
+```
+
+For 실적 시즌 경쟁사 테이블 업데이트, run:
 
 ```bash
 dart-audit season \
@@ -98,6 +116,7 @@ Always enforce these constraints:
 ## CLI Commands
 
 - `audit`: Run a story audit and generate requested outputs.
+- `company`: Run a company-name-only quick check.
 - `season`: Build or append an earnings-season competitor table from latest DART quarterly, semiannual, or annual filings.
 - `list`: List saved Research Cards.
 - `show`: Show one Research Card.

@@ -706,6 +706,33 @@ def render_html(result: dict[str, object], report_dir: Path = DEFAULT_REPORT_DIR
     return path
 
 
+def export_optional_formats(html_path: Path, outputs: set[str]) -> list[str]:
+    """PDF/PNG export는 optional이다. Playwright가 있으면 생성하고, 없으면 안내만 남긴다."""
+    requested = {"pdf", "png"} & outputs
+    if not requested:
+        return []
+    notes: list[str] = []
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+    except Exception:
+        return [f"PDF/PNG export skipped: Playwright is not installed. HTML is ready at {html_path}"]
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 1600})
+        page.goto(html_path.resolve().as_uri(), wait_until="networkidle")
+        if "pdf" in requested:
+            pdf_path = html_path.with_suffix(".pdf")
+            page.pdf(path=str(pdf_path), format="A4", print_background=True)
+            notes.append(f"PDF exported: {pdf_path}")
+        if "png" in requested:
+            png_path = html_path.with_suffix(".png")
+            page.screenshot(path=str(png_path), full_page=True)
+            notes.append(f"PNG exported: {png_path}")
+        browser.close()
+    return notes
+
+
 def load_card(db_path: Path, card_id: int) -> dict[str, object]:
     ensure_schema(db_path)
     with sqlite3.connect(db_path) as conn:
@@ -885,9 +912,11 @@ def audit(
     result = build_result(company, story, peers, industry, purpose, mode, live_evidence=live_evidence, api_key=api_key if live_evidence else None, fs_div=fs_div.upper())
     outputs = {item.strip() for item in output.split(",") if item.strip()}
     report_path: Optional[Path] = None
-    if "html" in outputs:
+    if {"html", "pdf", "png"} & outputs:
         report_path = render_html(result)
         console.print(f"[green]HTML one-pager:[/green] {report_path}")
+        for note in export_optional_formats(report_path, outputs):
+            console.print(f"[yellow]{note}[/yellow]" if "skipped" in note else f"[green]{note}[/green]")
     card_id: Optional[int] = None
     if "db" in outputs:
         card_id = save_card(db_path, request, result, report_path)
@@ -948,6 +977,33 @@ def season(
         table.add_row(*(row.get(col, "") for col in ["company", "latest_report", "revenue", "operating_profit", "op_margin", "special_situations"]))
     console.print(table)
     console.print(f"[green]Table updated:[/green] {table_path}")
+
+
+@app.command()
+def company(
+    company_name: str = typer.Argument(..., help="Company name"),
+    peers: str = typer.Option("", help="Optional comma-separated peer companies"),
+    industry: str = typer.Option("general", help="Industry lens"),
+    purpose: str = typer.Option("회사명 기반 빠른 실적 점검", help="Purpose"),
+    output: str = typer.Option("html,db", help="Comma-separated outputs: html,pdf,png,db"),
+    fallback: bool = typer.Option(False, help="Allow fixture fallback if DART fails"),
+    fs_div: str = typer.Option("CFS", help="Financial statement scope: CFS or OFS"),
+) -> None:
+    """Run a company-name-only quick audit."""
+    quick_story = "최근 실적과 공시 기준으로 이 회사가 좋아지고 있는지, 특수 상황은 무엇인지 확인"
+    audit(
+        company=company_name,
+        story=quick_story,
+        peers=peers,
+        industry=industry,
+        purpose=purpose,
+        output=output,
+        fallback=fallback,
+        force_fallback=False,
+        ir_file=None,
+        fs_div=fs_div,
+        db_path=DEFAULT_DB,
+    )
 
 
 @app.command("list")
